@@ -1,0 +1,18 @@
+[package]
+name = "candle-test"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+candle-core = { version = "0.9.1", features = ["cuda"]}
+candle-nn = "0.9.1"
+# Used for block manager hashing.
+ahash = "0.8"
+hashbrown = "0.16"
+zerocopy = "0.8"
+# Optional: text tokenizer for Qwen3 prompts.
+# You will need to provide a tokenizer.json path at runtime.
+tokenizers = "0.22"
+# Logging
+log = "0.4"
+env_logger = "0.11"
