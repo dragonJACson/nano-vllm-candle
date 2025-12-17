@@ -1,28 +1,60 @@
 use crate::engine::sequence::Sequence;
 
+#[derive(Debug, Clone)]
+pub struct BlockManagerConfig {
+    pub num_blocks: usize,
+    pub block_size: usize,
+}
+
+impl Default for BlockManagerConfig {
+    fn default() -> Self {
+        Self {
+            num_blocks: 0,
+            block_size: 256,
+        }
+    }
+}
+
+impl BlockManagerConfig {
+    pub const fn new(num_blocks: usize, block_size: usize) -> Self {
+        Self { num_blocks, block_size }
+    }
+}
+
 /// Minimal block manager implementation.
 ///
 /// This intentionally ignores real KV cache management and block
 /// deduplication from `nano-vllm`. The public API mirrors the Python
 /// version so that we can plug in an optimized implementation later
 /// without touching the rest of the engine.
+#[derive(Debug)]
 pub struct BlockManager {
-    block_size: usize,
-    /// Total number of blocks reserved for KV cache. Currently unused.
-    num_blocks: usize,
+    config: BlockManagerConfig,
+}
+
+impl Default for BlockManager {
+    fn default() -> Self {
+        Self::new(BlockManagerConfig::default())
+    }
+}
+
+impl From<BlockManagerConfig> for BlockManager {
+    fn from(config: BlockManagerConfig) -> Self {
+        Self::new(config)
+    }
 }
 
 impl BlockManager {
-    /// Create a new block manager.
-    ///
-    /// `num_blocks` and `block_size` are kept for compatibility with
-    /// `nano-vllm`, but the current minimal implementation only uses
-    /// `block_size` to maintain `Sequence::num_cached_tokens`.
-    pub fn new(num_blocks: usize, block_size: usize) -> Self {
-        Self {
-            block_size,
-            num_blocks,
-        }
+    pub fn new(config: BlockManagerConfig) -> Self {
+        Self { config }
+    }
+
+    pub fn block_size(&self) -> usize {
+        self.config.block_size
+    }
+
+    pub fn num_blocks(&self) -> usize {
+        self.config.num_blocks
     }
 
     /// Check whether we can allocate KV cache blocks for this sequence.
@@ -64,4 +96,24 @@ impl BlockManager {
     /// is implemented, this is where we will extend the last block or
     /// allocate a new one.
     pub fn may_append(&mut self, _seq: &mut Sequence) {}
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_config() {
+        let mgr = BlockManager::default();
+        assert_eq!(mgr.block_size(), 256);
+        assert_eq!(mgr.num_blocks(), 0);
+    }
+
+    #[test]
+    fn test_from_config() {
+        let config = BlockManagerConfig::new(16, 128);
+        let mgr = BlockManager::from(config);
+        assert_eq!(mgr.num_blocks(), 16);
+        assert_eq!(mgr.block_size(), 128);
+    }
 }
